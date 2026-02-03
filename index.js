@@ -13,7 +13,7 @@ const app = express()
 const port = process.env.PORT || 3002
 
 app.use(express.json())
-app.use(cors({ origin: "*" }))
+app.use(cors({ origin: [process.env.FRONTEND_URL, "https://clownfish-app-aaokq.ondigitalocean.app", "https://lorepa-seven.vercel.app", "http://localhost:3000"], credentials: true }))
 app.use("/api/v1", combineRouter)
 
 dbConnection()
