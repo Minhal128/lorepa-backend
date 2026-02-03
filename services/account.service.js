@@ -348,12 +348,12 @@ const googleAuthCallback = async (req, res) => {
         }
 
         // Redirect back to frontend with user info
-        const frontendUrl = process.env.FRONTEND_URL || "https://lorepa-seven.vercel.app";
+        const frontendUrl = process.env.FRONTEND_URL || "https://clownfish-app-aaokq.ondigitalocean.app";
         return res.redirect(`${frontendUrl}/login?userId=${user._id}&role=${user.role}&googleLogin=success`);
 
     } catch (error) {
         console.error("Google Auth Error:", error.response?.data || error.message);
-        const frontendUrl = process.env.FRONTEND_URL || "https://lorepa-seven.vercel.app";
+        const frontendUrl = process.env.FRONTEND_URL || "https://clownfish-app-aaokq.ondigitalocean.app";
         return res.redirect(`${frontendUrl}/login?error=google_failed`);
     }
 };
