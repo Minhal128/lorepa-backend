@@ -5,6 +5,8 @@ const bcrypt = require("bcryptjs")
 const { uploadFile, generatePin } = require("../utils/function");
 const { createNotification } = require("./notification.service");
 const { sendDynamicMail } = require("../utils/email");
+const axios = require("axios");
+
 
 
 const createAccount = async (req, res) => {
@@ -296,10 +298,11 @@ const changePasswordByEmail = async (req, res) => {
 
 
 const googleAuthCallback = async (req, res) => {
+    const frontendUrl = process.env.FRONTEND_URL || "https://clownfish-app-aaokq.ondigitalocean.app";
     try {
         const { code } = req.query;
-        const frontendUrl = process.env.FRONTEND_URL || "https://lorepa-seven.vercel.app";
         if (!code) return res.redirect(`${frontendUrl}/login?error=no_code`);
+
 
         const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
         const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -348,14 +351,14 @@ const googleAuthCallback = async (req, res) => {
         }
 
         // Redirect back to frontend with user info
-        const frontendUrl = process.env.FRONTEND_URL || "https://clownfish-app-aaokq.ondigitalocean.app";
         return res.redirect(`${frontendUrl}/login?userId=${user._id}&role=${user.role}&googleLogin=success`);
+
 
     } catch (error) {
         console.error("Google Auth Error:", error.response?.data || error.message);
-        const frontendUrl = process.env.FRONTEND_URL || "https://clownfish-app-aaokq.ondigitalocean.app";
         return res.redirect(`${frontendUrl}/login?error=google_failed`);
     }
+
 };
 
 module.exports = {
