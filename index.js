@@ -63,8 +63,7 @@ app.use("/api/v1/stripe", stripeRouter);
 
 const server = http.createServer(app)
 const io = new Server(server, {
-  cors: { origin: "*" },
-  transports: ['polling']
+  cors: { origin: "*" }
 })
 app.set("io", io)
 
