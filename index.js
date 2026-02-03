@@ -62,7 +62,10 @@ app.get('/api/place-details', async (req, res) => {
 app.use("/api/v1/stripe", stripeRouter);
 
 const server = http.createServer(app)
-const io = new Server(server, { cors: { origin: "*" } })
+const io = new Server(server, {
+  cors: { origin: "*" },
+  transports: ['polling']
+})
 app.set("io", io)
 
 io.on("connection", (socket) => {
