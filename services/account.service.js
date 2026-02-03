@@ -298,7 +298,8 @@ const changePasswordByEmail = async (req, res) => {
 const googleAuthCallback = async (req, res) => {
     try {
         const { code } = req.query;
-        if (!code) return res.redirect("https://lorepa-seven.vercel.app/login?error=no_code");
+        const frontendUrl = process.env.FRONTEND_URL || "https://lorepa-seven.vercel.app";
+        if (!code) return res.redirect(`${frontendUrl}/login?error=no_code`);
 
         const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
         const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
