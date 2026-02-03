@@ -299,7 +299,7 @@ const changePasswordByEmail = async (req, res) => {
 
 const googleAuthCallback = async (req, res) => {
 
-    const frontendUrl = process.env.FRONTEND_URL || "https://clownfish-app-aaokq.ondigitalocean.app";
+    const frontendUrl = process.env.FRONTEND_URL || "https://lorepa.ca";
 
     try {
         const { code } = req.query;
