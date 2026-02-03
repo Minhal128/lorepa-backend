@@ -6,7 +6,6 @@ const axios = require("axios");
 const { uploadFile, generatePin } = require("../utils/function");
 const { createNotification } = require("./notification.service");
 const { sendDynamicMail } = require("../utils/email");
-const axios = require("axios");
 
 
 
