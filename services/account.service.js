@@ -363,6 +363,37 @@ const googleAuthCallback = async (req, res) => {
 
 };
 
+// --- Update Notification Preferences ---
+const updateNotificationPreferences = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { notificationPreferences } = req.body;
+
+        if (!notificationPreferences) {
+            return res.status(400).json({ msg: "Notification preferences are required" });
+        }
+
+        let user = await AccountModel.findByIdAndUpdate(
+            id,
+            { notificationPreferences },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ msg: "User not found" });
+        }
+
+        return res.status(200).json({
+            data: user,
+            msg: "Notification preferences updated successfully"
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: "Internal Server Error" });
+    }
+};
+
 module.exports = {
     uploadPicture, createAccount, loginAccount, getAccountById, getAllAccount,
     deleteAccount, reactivateAccount, dashboardData, updateAccount, updateKYC,
@@ -370,5 +401,6 @@ module.exports = {
     resendOtp,
     verifyOtp,
     changePasswordByEmail,
-    googleAuthCallback
+    googleAuthCallback,
+    updateNotificationPreferences
 };

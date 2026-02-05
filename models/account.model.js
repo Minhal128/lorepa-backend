@@ -19,6 +19,11 @@ const AccountSchema = mongoose.Schema({
   trailerRegistrationImage: { type: String, default: "" },
   role: { type: String, enum: ["owner", "renter"], required: true },
   accountBlocked: { type: Boolean, default: false },
+  notificationPreferences: {
+    email: { type: Boolean, default: true },
+    sms: { type: Boolean, default: false },
+    inApp: { type: Boolean, default: true }
+  },
   createdAt: { type: Date, default: Date.now },
 
   otp: { type: Number, default: null },

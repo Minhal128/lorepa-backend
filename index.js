@@ -18,7 +18,7 @@ app.use("/api/v1", combineRouter)
 
 dbConnection()
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'YOUR_GOOGLE_API_KEY'
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzaSyASUc7l3wvJlyJXs2R_P2nEH17iIO8aicU'
 app.get('/api/autocomplete', async (req, res) => {
   try {
     const { input } = req.query

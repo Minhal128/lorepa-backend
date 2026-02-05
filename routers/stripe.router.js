@@ -1,7 +1,8 @@
 const router = require("express").Router();
 const Stripe = require("stripe");
-const stripe = new Stripe(process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY);
-// pk_test_51OoztADjwbwblMMWhOLMHnPlHAwGsamDfjrdMudztmDGu8UlHM59SqHwJEsyqlvSvHuQpBYct1t0aMOZIUiOFfJf00qZ3ney3t
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// Note: Ensure STRIPE_SECRET_KEY is set in your environment variables (e.g., Vercel, .env)
+// Live Stripe publishable key: pk_live_51OoztADjwbwblMMWanIsTlt7LdTDacdO0jw6JnOTNSnfT7aWiIHHxHAXLdSd0MsVWVvfRq4IK3jBuPJoKfxXv5Uq00d8plKYxb
 
 router.post("/create-checkout-session", async (req, res) => {
   try {
