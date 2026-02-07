@@ -13,7 +13,7 @@ router.post("/create-checkout-session", async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: "usd",
+            currency: "cad",
             product_data: {
               name: "Trailer Booking",
               description: `Booking trailer for ${startDate} to ${endDate}`,
