@@ -2,6 +2,8 @@ const { BookingModel } = require("../models/booking.model");
 const { TrailerModel } = require("../models/trailer.model");
 const { createNotification } = require("./notification.service");
 const { createTransaction } = require("./transaction.service");
+const Chat = require("../models/chat.model");
+const Message = require("../models/message.model");
 
 const create = async (req, res) => {
   try {
@@ -10,38 +12,58 @@ const create = async (req, res) => {
       trailerId,
       startDate,
       endDate,
-      price
+      price,
+      message
     } = req.body;
 
-
     const trailer = await TrailerModel.findById(trailerId);
-    if (!trailer) return res.status(404).json({ msg: "Trailer not found" })
+    if (!trailer) return res.status(404).json({ msg: "Trailer not found" });
 
+    // Create booking with "pending" status (no payment yet)
     const booking = await BookingModel.create({
       user_id,
       trailerId,
       startDate,
       endDate,
       price,
-      total_paid:price,
+      total_paid: 0,
+      message: message || "",
       owner_id: trailer?.userId
     });
 
     if (booking) {
+      // Create or find existing chat between user and owner
+      const participants = [user_id, trailer.userId.toString()];
+      let chat = await Chat.findOne({ participants: { $all: participants, $size: 2 } });
+      if (!chat) {
+        chat = await Chat.create({ participants });
+      }
+
+      // Send the booking message in the chat
+      if (message) {
+        const chatMessage = `📅 Booking Request for "${trailer.title}"\nDates: ${startDate} to ${endDate}\nPrice: $${price}\n\n${message}`;
+        await Message.create({
+          chatId: chat._id,
+          sender: user_id,
+          content: chatMessage
+        });
+        chat.lastMessage = chatMessage;
+        await chat.save();
+      }
+
       await createNotification({
         userId: user_id,
-        title: "Booking Created",
-        description: `Your booking for "${trailer.title}" has been successfully created.`
+        title: "Booking Request Sent",
+        description: `Your booking request for "${trailer.title}" has been sent. Waiting for owner approval.`
       });
 
       await createNotification({
         userId: booking.owner_id,
-        title: "New Booking Received",
-        description: `Your trailer "${trailer.title}" has a new booking request.`
+        title: "New Booking Request",
+        description: `You have a new booking request for your trailer "${trailer.title}". Please review and approve or reject.`
       });
 
-      res.status(200).json({ msg: "Booking created successfully", data: booking });
-
+      res.status(200).json({ msg: "Booking request sent successfully", data: booking });
     }
 
   } catch (err) {
@@ -111,19 +133,18 @@ const changeStatus = async (req, res) => {
     ).populate("trailerId")
 
     if (updated) {
-      await createNotification({
-        userId: updated.user_id,
-        title: `Booking ${status}`,
-        description: `Your booking for "${updated?.trailerId.title}" has been ${status}.`
-      });
-
-      await createNotification({
-        userId: updated.owner_id,
-        title: `Booking ${status}`,
-        description: `Booking for your trailer "${updated?.trailerId.title}" has been ${status}.`
-      });
-
       if (status === "accepted") {
+        // Owner accepted - notify user to sign contract
+        await createNotification({
+          userId: updated.user_id,
+          title: "Booking Approved!",
+          description: `Your booking for "${updated?.trailerId.title}" has been approved! Please sign the contract to proceed.`
+        });
+        await createNotification({
+          userId: updated.owner_id,
+          title: "Booking Approved",
+          description: `You approved the booking for "${updated?.trailerId.title}". Waiting for renter to sign the contract.`
+        });
         // Pending transaction for buyer and owner
         await createTransaction({
           userId: updated.user_id,
@@ -137,19 +158,74 @@ const changeStatus = async (req, res) => {
           amount: updated.price,
           status: "pending"
         });
-      } else if (status === "completed") {
-        // Paid transaction for buyer and owner
+      } else if (status === "rejected") {
+        await createNotification({
+          userId: updated.user_id,
+          title: "Booking Rejected",
+          description: `Your booking request for "${updated?.trailerId.title}" has been rejected by the owner.`
+        });
+        await createNotification({
+          userId: updated.owner_id,
+          title: "Booking Rejected",
+          description: `You rejected the booking for "${updated?.trailerId.title}".`
+        });
+      } else if (status === "cancelled") {
+        await createNotification({
+          userId: updated.user_id,
+          title: "Booking Cancelled",
+          description: `Your booking for "${updated?.trailerId.title}" has been cancelled.`
+        });
+        await createNotification({
+          userId: updated.owner_id,
+          title: "Booking Cancelled",
+          description: `The booking for "${updated?.trailerId.title}" has been cancelled.`
+        });
+      } else if (status === "paid") {
+        // Payment completed
+        await createNotification({
+          userId: updated.user_id,
+          title: "Payment Successful",
+          description: `Your payment for "${updated?.trailerId.title}" has been received. Your booking is confirmed!`
+        });
+        await createNotification({
+          userId: updated.owner_id,
+          title: "Payment Received",
+          description: `Payment received for your trailer "${updated?.trailerId.title}". The renter can now pick up the trailer.`
+        });
         await createTransaction({
           userId: updated.user_id,
-          description: `Booking completed for "${updated.trailerId.title}"`,
+          description: `Payment for "${updated.trailerId.title}"`,
           amount: updated.price,
           status: "paid"
         });
         await createTransaction({
           userId: updated.owner_id,
-          description: `Booking completed for "${updated.trailerId.title}"`,
+          description: `Payment received for "${updated.trailerId.title}"`,
           amount: updated.price,
           status: "paid"
+        });
+      } else if (status === "completed") {
+        // Completed transaction
+        await createNotification({
+          userId: updated.user_id,
+          title: "Booking Completed",
+          description: `Your booking for "${updated?.trailerId.title}" has been completed.`
+        });
+        await createNotification({
+          userId: updated.owner_id,
+          title: "Booking Completed",
+          description: `Booking for your trailer "${updated?.trailerId.title}" has been completed.`
+        });
+      } else {
+        await createNotification({
+          userId: updated.user_id,
+          title: `Booking ${status}`,
+          description: `Your booking for "${updated?.trailerId.title}" has been ${status}.`
+        });
+        await createNotification({
+          userId: updated.owner_id,
+          title: `Booking ${status}`,
+          description: `Booking for your trailer "${updated?.trailerId.title}" has been ${status}.`
         });
       }
 
@@ -200,6 +276,39 @@ const requestChange = async (req, res) => {
 };
 
 
+const signContract = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const booking = await BookingModel.findById(id).populate("trailerId");
+    if (!booking) return res.status(404).json({ msg: "Booking not found" });
+
+    if (booking.status !== "accepted") {
+      return res.status(400).json({ msg: "Booking must be accepted before signing the contract" });
+    }
+
+    booking.contractSigned = true;
+    await booking.save();
+
+    await createNotification({
+      userId: booking.user_id,
+      title: "Contract Signed",
+      description: `You have signed the contract for "${booking.trailerId.title}". You can now proceed to payment.`
+    });
+
+    await createNotification({
+      userId: booking.owner_id,
+      title: "Contract Signed",
+      description: `The renter has signed the contract for "${booking.trailerId.title}".`
+    });
+
+    res.status(200).json({ msg: "Contract signed successfully", data: booking });
+  } catch (err) {
+    res.status(500).json({ msg: "Error signing contract", error: err.message });
+  }
+};
+
+
 module.exports = {
   create,
   getAll,
@@ -208,5 +317,6 @@ module.exports = {
   changeStatus,
   getAllForBuyer,
   getAllForSeller,
-  requestChange
+  requestChange,
+  signContract
 };

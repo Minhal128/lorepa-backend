@@ -6,10 +6,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 router.post("/create-checkout-session", async (req, res) => {
   try {
-    const { trailerId, userId, startDate, endDate, price } = req.body;
+    const { trailerId, userId, startDate, endDate, price, bookingId } = req.body;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
+      locale: "en",
       line_items: [
         {
           price_data: {
@@ -25,9 +26,9 @@ router.post("/create-checkout-session", async (req, res) => {
       ],
       mode: "payment",
 
-      //   success_url: `http://localhost:5173/payment-success?trailerId=${trailerId}&price=${price}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
+      //   success_url: `http://localhost:5173/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${price}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
       //   cancel_url: `http://localhost:5173/payment-cancel`,
-      success_url: `https://lorepa.ca/payment-success?trailerId=${trailerId}&price=${price}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://lorepa.ca/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${price}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `https://lorepa.ca/payment-cancel`,
     });
 

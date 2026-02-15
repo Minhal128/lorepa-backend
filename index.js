@@ -59,6 +59,44 @@ app.get('/api/place-details', async (req, res) => {
 });
 
 
+app.get('/api/reverse-geocode', async (req, res) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) return res.status(400).json({ error: "lat and lng are required" });
+
+    const response = await axios.get(
+      'https://maps.googleapis.com/maps/api/geocode/json',
+      { params: { latlng: `${lat},${lng}`, key: GOOGLE_API_KEY, language: 'en' } }
+    );
+
+    if (response.data.status === 'OK' && response.data.results.length > 0) {
+      const result = response.data.results[0];
+      let city = "";
+      let country = "";
+
+      result.address_components.forEach((c) => {
+        if (c.types.includes("locality")) city = c.long_name;
+        if (!city && (c.types.includes("administrative_area_level_1") || c.types.includes("political"))) city = c.long_name;
+        if (c.types.includes("country")) country = c.long_name;
+      });
+
+      return res.json({
+        status: "OK",
+        city,
+        country,
+        formatted_address: result.formatted_address,
+        lat: parseFloat(lat),
+        lng: parseFloat(lng),
+      });
+    }
+
+    return res.json({ status: "ZERO_RESULTS" });
+  } catch (err) {
+    console.error('Reverse Geocode Error:', err.response?.data || err.message);
+    res.status(500).json({ error: 'Error fetching reverse geocode', details: err.message });
+  }
+});
+
 app.use("/api/v1/stripe", stripeRouter);
 
 const server = http.createServer(app)
