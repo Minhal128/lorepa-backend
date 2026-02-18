@@ -7,7 +7,7 @@ const trailerSchema = new mongoose.Schema({
     category: { type: String, required: true },
     images: { type: Array, default: [] },
     closedDates: { type: Array, default: [] },
-    country: { type: String, required: true },
+    country: { type: String },
     city: { type: String, required: true },
     state: { type: String },
     zip: { type: String },

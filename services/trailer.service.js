@@ -39,17 +39,16 @@ const create = async (req, res) => {
     const imageUrls = await Promise.all(
       files.map((file) => uploadFile(file))
     );
-    const trailer = await TrailerModel.create({
-      latitude, longitude, userId, title, category, description, zip, dailyRate, depositRate, closedDates, city, country, images: imageUrls, hitchType,
-      lightPlug,
-      weightCapacity,
-      make,
-      model,
-      year,
-      length,
-      ballSize,
-      dimensions,
-      state
+      const requiredFields = [
+        "userId",
+        "title",
+        "description",
+        "category",
+        "city",
+        "latitude",
+        "longitude",
+        "dailyRate",
+      ];
     });
     await createNotification({
       userId,
