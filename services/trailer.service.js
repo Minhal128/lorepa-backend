@@ -43,9 +43,16 @@ const create = async (req, res) => {
         "userId",
         "title",
         "description",
-        "category",
-        "city",
-        "latitude",
+        let imageUrls;
+        let uploadWarning = null;
+        try {
+          imageUrls = await Promise.all(files.map((file) => uploadFile(file)));
+        } catch (uploadErr) {
+          console.error("Image upload failed:", uploadErr);
+          // Fallback: use placeholder images so trailer creation can continue instead of failing
+          const placeholder = `https://placehold.co/800x600?text=No+Image`;
+          imageUrls = files.map(() => placeholder);
+          uploadWarning = uploadErr.message || "Image upload failed, using placeholders";
         "longitude",
         "dailyRate",
       ];
@@ -63,7 +70,9 @@ const create = async (req, res) => {
       .json({ msg: "Something went wrong", error: err.message });
   }
 };
-
+      const resp = { msg: "Trailer created successfully", data: trailer, status: 200 };
+      if (uploadWarning) resp.uploadWarning = uploadWarning;
+      return res.status(200).json(resp);
 const getAll = async (req, res) => {
   try {
     const trailers = await TrailerModel.find().populate("userId");
