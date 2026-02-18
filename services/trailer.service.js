@@ -49,8 +49,7 @@ const create = async (req, res) => {
       length,
       ballSize,
       dimensions,
-      state,
-      zip
+      state
     });
     await createNotification({
       userId,
