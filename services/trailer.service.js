@@ -13,7 +13,6 @@ const create = async (req, res) => {
       description,
       zip,
       dailyRate,
-      depositRate,
       city,
       country,
       closedDates,
@@ -42,6 +41,8 @@ const create = async (req, res) => {
       const requiredFields = [
         "userId",
         "title",
+      "latitude",
+      "longitude",
         "description",
         let imageUrls;
         let uploadWarning = null;
