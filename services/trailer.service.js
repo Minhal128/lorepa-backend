@@ -35,35 +35,34 @@ const create = async (req, res) => {
     if (files.length > 10) {
       return res.status(400).json({ msg: "Maximum 10 images allowed" });
     }
-    const imageUrls = await Promise.all(
-      files.map((file) => uploadFile(file))
-    );
-      const requiredFields = [
-        "userId",
-        "title",
-      "latitude",
-      "longitude",
-        "description",
-        let imageUrls;
-        let uploadWarning = null;
-        try {
-          imageUrls = await Promise.all(files.map((file) => uploadFile(file)));
-        } catch (uploadErr) {
-          console.error("Image upload failed:", uploadErr);
-          // Fallback: use placeholder images so trailer creation can continue instead of failing
-          const placeholder = `https://placehold.co/800x600?text=No+Image`;
-          imageUrls = files.map(() => placeholder);
-          uploadWarning = uploadErr.message || "Image upload failed, using placeholders";
-        "longitude",
-        "dailyRate",
-      ];
+
+    let imageUrls;
+    let uploadWarning = null;
+    try {
+      imageUrls = await Promise.all(files.map((file) => uploadFile(file)));
+    } catch (uploadErr) {
+      console.error("Image upload failed:", uploadErr);
+      const placeholder = `https://placehold.co/800x600?text=No+Image`;
+      imageUrls = files.map(() => placeholder);
+      uploadWarning = uploadErr.message || "Image upload failed, using placeholders";
+    }
+
+    const trailer = await TrailerModel.create({
+      userId, title, category, description, images: imageUrls,
+      latitude, longitude, city, country, state, zip, dailyRate,
+      closedDates, hitchType, lightPlug, weightCapacity,
+      make, model, year, length, ballSize, dimensions,
     });
+
     await createNotification({
       userId,
       title: "Trailer Listing Submitted",
       description: "Your trailer listing request has been sent to the admin for approval."
     });
-    return res.status(200).json({ msg: "Trailer created successfully", data: trailer, status: 200 });
+
+    const resp = { msg: "Trailer created successfully", data: trailer, status: 200 };
+    if (uploadWarning) resp.uploadWarning = uploadWarning;
+    return res.status(200).json(resp);
   } catch (err) {
     console.error(err);
     return res
@@ -71,9 +70,6 @@ const create = async (req, res) => {
       .json({ msg: "Something went wrong", error: err.message });
   }
 };
-      const resp = { msg: "Trailer created successfully", data: trailer, status: 200 };
-      if (uploadWarning) resp.uploadWarning = uploadWarning;
-      return res.status(200).json(resp);
 const getAll = async (req, res) => {
   try {
     const trailers = await TrailerModel.find().populate("userId");
@@ -84,7 +80,7 @@ const getAll = async (req, res) => {
 };
 const getAllApproved = async (req, res) => {
   try {
-    const trailers = await TrailerModel.find({ status: "approved" }).populate("userId");
+    const trailers = await TrailerModel.find({ status: { $regex: /^approved$/i } }).populate("userId");
     res.status(200).json({ data: trailers });
   } catch (err) {
     res.status(500).json({ msg: "Error fetching trailers" });
@@ -96,7 +92,7 @@ const searchTrailers = async (req, res) => {
   try {
     const { location, category, minPrice, maxPrice, sortBy } = req.query;
 
-    let query = { status: "approved" };
+    let query = { status: { $regex: /^approved$/i } };
 
     // Simplified Location Search: search for any of the terms anywhere in city/state/country
     if (location) {
@@ -170,7 +166,7 @@ const searchTrailers = async (req, res) => {
 // Debug endpoint to check location data
 const debugLocations = async (req, res) => {
   try {
-    const trailers = await TrailerModel.find({ status: "approved" })
+    const trailers = await TrailerModel.find({ status: { $regex: /^approved$/i } })
       .select('title city state country')
       .limit(20);
 

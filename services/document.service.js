@@ -3,7 +3,7 @@ const { uploadFile } = require("../utils/function");
 
 exports.create = async (req, res) => {
     try {
-        const { userId, uploadType, documentType, trailerId, description } = req.body;
+        const { userId, uploadType, documentType, trailerId, bookingId, description } = req.body;
 
         if (!req.file) {
             return res.status(400).json({ msg: "File is required" });
@@ -16,6 +16,7 @@ exports.create = async (req, res) => {
             uploadType,
             documentType,
             trailerId,
+            bookingId,
             description,
             fileUrl
         });
@@ -81,5 +82,18 @@ exports.getByUser = async (req, res) => {
 
     } catch (err) {
         return res.status(500).json({ msg: "Error fetching documents" });
+    }
+};
+
+exports.remove = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const doc = await Document.findByIdAndDelete(id);
+        if (!doc) {
+            return res.status(404).json({ msg: "Document not found" });
+        }
+        return res.status(200).json({ msg: "Document deleted", data: doc });
+    } catch (err) {
+        return res.status(500).json({ msg: "Error deleting document", error: err.message });
     }
 };

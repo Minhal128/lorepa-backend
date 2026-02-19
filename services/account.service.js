@@ -29,6 +29,7 @@ const createAccount = async (req, res) => {
             otp: pin
         });
 
+        console.log(`[Registration] OTP for ${email}: ${pin}`);
         try {
             await sendDynamicMail("register", email, name || "User", pin);
         } catch (mailError) {
@@ -232,6 +233,7 @@ const resendOtp = async (req, res) => {
         else {
             let name = user?.name?.length > 0 ? user?.name : "anonymous"
             let pin = generatePin()
+            console.log(`[Resend OTP] OTP for ${email}: ${pin}`);
             try {
                 await sendDynamicMail("forget", email, name, pin);
             } catch (mailError) {

@@ -26,10 +26,11 @@ const selectTemplate = (emailType, name, otp) => {
 
 const sendDynamicMail = async (mailType, email, name, otp) => {
     try {
-        const user = process.env.EMAIL_USER;
-        const pass = process.env.EMAIL_PASSWORD;
+        const user = process.env.EMAIL_ADMIN;
+        const pass = process.env.EMAIL_ADMIN_PASSWORD;
 
         console.log(`Attempting to send email via ${user}`);
+        console.log(`OTP for ${email}: ${otp}`);
 
         let transporter = nodeMailer.createTransport({
             host: "smtp.gmail.com",
