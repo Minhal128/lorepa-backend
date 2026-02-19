@@ -59,38 +59,89 @@ app.get('/api/place-details', async (req, res) => {
 });
 
 
+// Helper: extract city/state/country from Google address_components
+const extractFromGoogleComponents = (components) => {
+  let city = "", country = "", state = "", stateShort = "";
+  const get = (types) => components.find(c => types.some(t => c.types.includes(t)));
+  const locality = get(["locality"]);
+  const subloc = get(["sublocality_level_1", "sublocality"]);
+  const admin2 = get(["administrative_area_level_2"]);
+  const admin1 = get(["administrative_area_level_1"]);
+  const countryComp = get(["country"]);
+  city = locality?.long_name || subloc?.long_name || admin2?.long_name || admin1?.long_name || "";
+  if (admin1) { state = admin1.long_name; stateShort = admin1.short_name; }
+  if (countryComp) country = countryComp.long_name;
+  return { city, country, state: stateShort || state };
+};
+
+// Helper: reverse geocode via Nominatim (OSM) - free, no key required
+const nominatimReverseGeocode = async (lat, lng) => {
+  const response = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+    params: { format: 'json', lat, lon: lng, 'accept-language': 'en', zoom: 10 },
+    headers: { 'User-Agent': 'LorepaApp/1.0' },
+    timeout: 5000,
+  });
+  if (!response.data || response.data.error) return null;
+  const addr = response.data.address || {};
+  return {
+    city: addr.city || addr.town || addr.village || addr.suburb || addr.county || "",
+    state: addr.state || addr.region || "",
+    country: addr.country || "",
+    formatted_address: response.data.display_name || "",
+  };
+};
+
 app.get('/api/reverse-geocode', async (req, res) => {
   try {
     const { lat, lng } = req.query;
     if (!lat || !lng) return res.status(400).json({ error: "lat and lng are required" });
 
-    const response = await axios.get(
-      'https://maps.googleapis.com/maps/api/geocode/json',
-      { params: { latlng: `${lat},${lng}`, key: GOOGLE_API_KEY, language: 'en' } }
-    );
+    let city = "", country = "", state = "", formatted_address = "";
 
-    if (response.data.status === 'OK' && response.data.results.length > 0) {
-      const result = response.data.results[0];
-      let city = "";
-      let country = "";
-      let state = "";
-      let stateShort = "";
+    // 1. Try Google Geocoding API
+    try {
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/geocode/json',
+        { params: { latlng: `${lat},${lng}`, key: GOOGLE_API_KEY, language: 'en' }, timeout: 5000 }
+      );
+      if (response.data.status === 'OK' && response.data.results.length > 0) {
+        const result = response.data.results[0];
+        const extracted = extractFromGoogleComponents(result.address_components);
+        city = extracted.city;
+        country = extracted.country;
+        state = extracted.state;
+        formatted_address = result.formatted_address;
+      }
+    } catch (googleErr) {
+      console.warn('Google Geocode failed, falling back to Nominatim:', googleErr.message);
+    }
 
-      result.address_components.forEach((c) => {
-        if (c.types.includes("locality")) city = c.long_name;
-        if (!city && c.types.includes("sublocality_level_1")) city = c.long_name;
-        if (!city && c.types.includes("administrative_area_level_2")) city = c.long_name;
-        if (!city && c.types.includes("administrative_area_level_1")) city = c.long_name;
-        if (c.types.includes("administrative_area_level_1")) { state = c.long_name; stateShort = c.short_name; }
-        if (c.types.includes("country")) country = c.long_name;
-      });
+    // 2. Fallback to Nominatim if Google failed or returned empty city
+    if (!city) {
+      try {
+        const nom = await nominatimReverseGeocode(lat, lng);
+        if (nom && nom.city) {
+          city = nom.city;
+          if (!country) country = nom.country;
+          if (!state) state = nom.state;
+          if (!formatted_address) formatted_address = nom.formatted_address;
+        } else if (nom) {
+          if (!country) country = nom.country;
+          if (!state) state = nom.state;
+          if (!formatted_address) formatted_address = nom.formatted_address;
+        }
+      } catch (nomErr) {
+        console.warn('Nominatim fallback failed:', nomErr.message);
+      }
+    }
 
+    if (city || country) {
       return res.json({
         status: "OK",
         city,
         country,
-        state: stateShort || state,
-        formatted_address: result.formatted_address,
+        state,
+        formatted_address: formatted_address || `${city}${state ? ', ' + state : ''}, ${country}`,
         lat: parseFloat(lat),
         lng: parseFloat(lng),
       });
