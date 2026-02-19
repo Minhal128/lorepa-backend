@@ -73,10 +73,15 @@ app.get('/api/reverse-geocode', async (req, res) => {
       const result = response.data.results[0];
       let city = "";
       let country = "";
+      let state = "";
+      let stateShort = "";
 
       result.address_components.forEach((c) => {
         if (c.types.includes("locality")) city = c.long_name;
-        if (!city && (c.types.includes("administrative_area_level_1") || c.types.includes("political"))) city = c.long_name;
+        if (!city && c.types.includes("sublocality_level_1")) city = c.long_name;
+        if (!city && c.types.includes("administrative_area_level_2")) city = c.long_name;
+        if (!city && c.types.includes("administrative_area_level_1")) city = c.long_name;
+        if (c.types.includes("administrative_area_level_1")) { state = c.long_name; stateShort = c.short_name; }
         if (c.types.includes("country")) country = c.long_name;
       });
 
@@ -84,6 +89,7 @@ app.get('/api/reverse-geocode', async (req, res) => {
         status: "OK",
         city,
         country,
+        state: stateShort || state,
         formatted_address: result.formatted_address,
         lat: parseFloat(lat),
         lng: parseFloat(lng),

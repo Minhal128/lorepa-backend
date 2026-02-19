@@ -80,7 +80,7 @@ const getAll = async (req, res) => {
 };
 const getAllApproved = async (req, res) => {
   try {
-    const trailers = await TrailerModel.find({ status: { $regex: /^approved$/i } }).populate("userId");
+    const trailers = await TrailerModel.find({ status: { $regex: "^approved$", $options: "i" } }).populate("userId");
     res.status(200).json({ data: trailers });
   } catch (err) {
     res.status(500).json({ msg: "Error fetching trailers" });
@@ -92,7 +92,7 @@ const searchTrailers = async (req, res) => {
   try {
     const { location, category, minPrice, maxPrice, sortBy } = req.query;
 
-    let query = { status: { $regex: /^approved$/i } };
+    let query = { status: { $regex: "^approved$", $options: "i" } };
 
     // Simplified Location Search: search for any of the terms anywhere in city/state/country
     if (location) {
@@ -166,7 +166,7 @@ const searchTrailers = async (req, res) => {
 // Debug endpoint to check location data
 const debugLocations = async (req, res) => {
   try {
-    const trailers = await TrailerModel.find({ status: { $regex: /^approved$/i } })
+    const trailers = await TrailerModel.find({ status: { $regex: "^approved$", $options: "i" } })
       .select('title city state country')
       .limit(20);
 
@@ -301,22 +301,31 @@ const update = async (req, res) => {
     }
 
     // Update trailer fields
-    trailer.latitude = latitude ?? trailer.latitude;
-    trailer.longitude = longitude ?? trailer.longitude;
-    trailer.title = title ?? trailer.title;
-    trailer.category = category ?? trailer.category;
-    trailer.description = description ?? trailer.description;
+    // For lat/lng: parse as float and only update if valid number
+    const parsedLat = parseFloat(latitude);
+    const parsedLng = parseFloat(longitude);
+    if (!isNaN(parsedLat)) trailer.latitude = parsedLat;
+    if (!isNaN(parsedLng)) trailer.longitude = parsedLng;
+
+    // For required text fields: use || so empty strings don't overwrite existing values
+    trailer.title = title || trailer.title;
+    trailer.category = category || trailer.category;
+    trailer.description = description || trailer.description;
+
+    // For location strings: only update if new value is non-empty to preserve existing location data
+    trailer.city = city || trailer.city;
+    trailer.country = country || trailer.country;
+    trailer.state = state || trailer.state;
+
+    // For optional fields: use ?? (allows intentional empty)
     trailer.zip = zip ?? trailer.zip;
     trailer.dailyRate = dailyRate ?? trailer.dailyRate;
     trailer.depositRate = depositRate ?? trailer.depositRate;
-    trailer.city = city ?? trailer.city;
-    trailer.country = country ?? trailer.country;
     trailer.closedDates = closedDates ?? trailer.closedDates;
     trailer.images = newImages;
 
     // Update new fields
     trailer.hitchType = hitchType ?? trailer.hitchType;
-    trailer.state = state ?? trailer.state;
     trailer.lightPlug = lightPlug ?? trailer.lightPlug;
     trailer.weightCapacity = weightCapacity ?? trailer.weightCapacity;
     trailer.make = make ?? trailer.make;
