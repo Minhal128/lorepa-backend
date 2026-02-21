@@ -6,7 +6,7 @@ exports.createChat = async (req, res) => {
     const { participants } = req.body
     if (!participants || participants.length !== 2)
       return res.status(400).json({ msg: "Exactly 2 participants required" })
-    const existingChat = await Chat.findOne({participants: { $all: participants, $size: 2 }}).populate("participants")
+    const existingChat = await Chat.findOne({ participants: { $all: participants, $size: 2 } }).populate("participants")
     if (existingChat) return res.status(200).json({ data: existingChat })
     const chat = await Chat.create({ participants })
     const populatedChat = await Chat.findById(chat._id).populate("participants",)
@@ -31,15 +31,29 @@ exports.sendMessage = async (req, res) => {
 
 exports.getChatsByUser = async (req, res) => {
   try {
-    const { userId } = req.params
+    const { userId } = req.params;
     const chats = await Chat.find({ participants: userId })
       .populate("participants", "name email")
       .sort({ updatedAt: -1 })
-    res.status(200).json({ data: chats })
+      .lean(); // Fetch as plain JS objects so we can easily mutate
+
+    // Attach unreadCount to each chat
+    const chatsWithUnreadCount = await Promise.all(
+      chats.map(async (chat) => {
+        const unreadCount = await Message.countDocuments({
+          chatId: chat._id,
+          sender: { $ne: userId },
+          readBy: { $ne: userId }
+        });
+        return { ...chat, unreadCount };
+      })
+    );
+
+    res.status(200).json({ data: chatsWithUnreadCount });
   } catch (err) {
-    res.status(500).json({ msg: err.message })
+    res.status(500).json({ msg: err.message });
   }
-}
+};
 
 exports.getMessagesByChat = async (req, res) => {
   try {
