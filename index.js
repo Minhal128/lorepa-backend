@@ -169,13 +169,55 @@ io.on("connection", (socket) => {
     socket.join(chatId)
   })
 
-  socket.on("sendMessage", async ({ chatId, sender, content }) => {
+  // Renamed to broadcastMessage to prevent duplicate DB creation.
+  // The client will save via REST /chat/send first, then emit broadcastMessage
+  socket.on("broadcastMessage", (message) => {
     try {
-      const message = await Message.create({ chatId, sender, content })
-      const populatedMessage = await Message.findById(message._id).populate("sender", "name _id")
-      io.to(chatId).emit("receiveMessage", populatedMessage)
+      // Broadcast the fully populated message to the room
+      io.to(message.chatId).emit("receiveMessage", message)
     } catch (err) {
-      console.error("Socket sendMessage error:", err)
+      console.error("Socket broadcastMessage error:", err)
+    }
+  })
+
+  // Typing indicators
+  socket.on("typing", ({ chatId, userId }) => {
+    socket.to(chatId).emit("userTyping", { chatId, userId })
+  })
+
+  socket.on("stopTyping", ({ chatId, userId }) => {
+    socket.to(chatId).emit("userStoppedTyping", { chatId, userId })
+  })
+
+  // Mark message as read
+  socket.on("markAsRead", async ({ messageId, chatId, userId }) => {
+    try {
+      // Add userId to readBy array if not already present
+      const message = await Message.findByIdAndUpdate(
+        messageId,
+        { $addToSet: { readBy: userId } },
+        { new: true }
+      ).populate("sender", "name _id")
+
+      if (message) {
+        io.to(chatId).emit("messageRead", message)
+      }
+    } catch (err) {
+      console.error("Socket markAsRead error:", err)
+    }
+  })
+
+  // Mark ALl messages in chat as read for a user
+  socket.on("markChatAsRead", async ({ chatId, userId }) => {
+    try {
+      // Find messages in this chat NOT sent by this user, and add userId to readBy
+      await Message.updateMany(
+        { chatId, sender: { $ne: userId } },
+        { $addToSet: { readBy: userId } }
+      )
+      io.to(chatId).emit("chatRead", { chatId, userId })
+    } catch (err) {
+      console.error("Socket markChatAsRead error:", err)
     }
   })
 
