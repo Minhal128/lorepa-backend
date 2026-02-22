@@ -222,6 +222,16 @@ const remove = async (req, res) => {
   }
 };
 
+// Delete Testing Trailers (trailers whose title contains "test" case-insensitively)
+const deleteTestTrailers = async (req, res) => {
+  try {
+    const result = await TrailerModel.deleteMany({ title: { $regex: /^test/i } });
+    res.status(200).json({ msg: `${result.deletedCount} testing trailer(s) deleted`, deletedCount: result.deletedCount });
+  } catch (err) {
+    res.status(500).json({ msg: "Error deleting testing trailers" });
+  }
+};
+
 // Change Status
 const changeStatus = async (req, res) => {
   try {
@@ -356,5 +366,6 @@ module.exports = {
   getAllBySeller,
   update,
   searchTrailers,
-  debugLocations
+  debugLocations,
+  deleteTestTrailers
 };
