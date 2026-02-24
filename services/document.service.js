@@ -9,6 +9,15 @@ exports.create = async (req, res) => {
             return res.status(400).json({ msg: "File is required" });
         }
 
+        // Validation: Guest (renter/user) can only upload post-rental (Check-out) photos
+        if (uploadType === "Guest" && documentType === "Check-in Photo") {
+            return res.status(403).json({ msg: "Renters can only upload post-rental (check-out) photos. Pre-rental photos are uploaded by the owner." });
+        }
+        // Validation: Host (owner/seller) can only upload pre-rental (Check-in) photos
+        if (uploadType === "Host" && documentType === "Check-out Photo") {
+            return res.status(403).json({ msg: "Owners can only upload pre-rental (check-in) photos. Post-rental photos are uploaded by the renter." });
+        }
+
         const fileUrl = await uploadFile(req.file);
 
         const doc = await Document.create({
@@ -39,6 +48,15 @@ exports.createMultiple = async (req, res) => {
 
         if (req.files.length > 15) {
             return res.status(400).json({ msg: "Maximum 15 files allowed" });
+        }
+
+        // Validation: Guest (renter/user) can only upload post-rental (Check-out) photos
+        if (uploadType === "Guest" && documentType === "Check-in Photo") {
+            return res.status(403).json({ msg: "Renters can only upload post-rental (check-out) photos. Pre-rental photos are uploaded by the owner." });
+        }
+        // Validation: Host (owner/seller) can only upload pre-rental (Check-in) photos
+        if (uploadType === "Host" && documentType === "Check-out Photo") {
+            return res.status(403).json({ msg: "Owners can only upload pre-rental (check-in) photos. Post-rental photos are uploaded by the renter." });
         }
 
         const documents = await Promise.all(req.files.map(async (file) => {
