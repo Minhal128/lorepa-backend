@@ -1,12 +1,28 @@
 const router = require("express").Router();
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const { BookingModel } = require("../models/booking.model");
 // Note: Ensure STRIPE_SECRET_KEY is set in your environment variables (e.g., Vercel, .env)
 // Live Stripe publishable key: pk_live_51OoztADjwbwblMMWanIsTlt7LdTDacdO0jw6JnOTNSnfT7aWiIHHxHAXLdSd0MsVWVvfRq4IK3jBuPJoKfxXv5Uq00d8plKYxb
+
+const SERVICE_FEE_RATE = 0.05;
 
 router.post("/create-checkout-session", async (req, res) => {
   try {
     const { trailerId, userId, startDate, endDate, price, bookingId } = req.body;
+
+    // Fetch the booking to get the authoritative rental price (prevent price tampering)
+    let rentalPrice = parseFloat(price);
+    if (bookingId) {
+      const booking = await BookingModel.findById(bookingId);
+      if (booking) {
+        rentalPrice = booking.price;
+      }
+    }
+
+    // Calculate service fee server-side for security
+    const serviceFee = parseFloat((rentalPrice * SERVICE_FEE_RATE).toFixed(2));
+    const totalWithFee = parseFloat((rentalPrice + serviceFee).toFixed(2));
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -16,19 +32,30 @@ router.post("/create-checkout-session", async (req, res) => {
           price_data: {
             currency: "cad",
             product_data: {
-              name: "Trailer Booking",
-              description: `Booking trailer for ${startDate} to ${endDate}`,
+              name: "Trailer Rental",
+              description: `Rental from ${startDate} to ${endDate}`,
             },
-            unit_amount: Math.round(price * 100),
+            unit_amount: Math.round(rentalPrice * 100),
+          },
+          quantity: 1,
+        },
+        {
+          price_data: {
+            currency: "cad",
+            product_data: {
+              name: "Lorepa Service Fee (5%)",
+              description: "Platform service fee",
+            },
+            unit_amount: Math.round(serviceFee * 100),
           },
           quantity: 1,
         },
       ],
       mode: "payment",
 
-      //   success_url: `http://localhost:5173/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${price}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
+      //   success_url: `http://localhost:5173/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${totalWithFee}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
       //   cancel_url: `http://localhost:5173/payment-cancel`,
-      success_url: `https://lorepa.ca/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${price}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://lorepa.ca/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${totalWithFee}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `https://lorepa.ca/payment-cancel`,
     });
 

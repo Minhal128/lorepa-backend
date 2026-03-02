@@ -5,6 +5,8 @@ const { createTransaction } = require("./transaction.service");
 const Chat = require("../models/chat.model");
 const Message = require("../models/message.model");
 
+const SERVICE_FEE_RATE = 0.05;
+
 const create = async (req, res) => {
   try {
     const {
@@ -19,13 +21,19 @@ const create = async (req, res) => {
     const trailer = await TrailerModel.findById(trailerId);
     if (!trailer) return res.status(404).json({ msg: "Trailer not found" });
 
+    const rentalPrice = parseFloat(price);
+    const service_fee = parseFloat((rentalPrice * SERVICE_FEE_RATE).toFixed(2));
+    const total_with_fee = parseFloat((rentalPrice + service_fee).toFixed(2));
+
     // Create booking with "pending" status (no payment yet)
     const booking = await BookingModel.create({
       user_id,
       trailerId,
       startDate,
       endDate,
-      price,
+      price: rentalPrice,
+      service_fee,
+      total_with_fee,
       total_paid: 0,
       message: message || "",
       owner_id: trailer?.userId
@@ -181,7 +189,9 @@ const changeStatus = async (req, res) => {
           description: `The booking for "${updated?.trailerId.title}" has been cancelled.`
         });
       } else if (status === "paid") {
-        // Payment completed
+        // Payment completed — update total_paid to the fee-inclusive amount
+        const paidAmount = updated.total_with_fee || updated.price;
+        await BookingModel.findByIdAndUpdate(id, { total_paid: paidAmount });
         await createNotification({
           userId: updated.user_id,
           title: "Payment Successful",
@@ -195,13 +205,13 @@ const changeStatus = async (req, res) => {
         await createTransaction({
           userId: updated.user_id,
           description: `Payment for "${updated.trailerId.title}"`,
-          amount: updated.price,
+          amount: paidAmount,
           status: "paid"
         });
         await createTransaction({
           userId: updated.owner_id,
           description: `Payment received for "${updated.trailerId.title}"`,
-          amount: updated.price,
+          amount: paidAmount,
           status: "paid"
         });
       } else if (status === "completed") {

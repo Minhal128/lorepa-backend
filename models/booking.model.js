@@ -8,6 +8,8 @@ const bookingSchema = new mongoose.Schema({
     notes: { type: String, default: "" },
     endDate: { type: String, required: true },
     price: { type: Number, required: true },
+    service_fee: { type: Number, default: 0 },
+    total_with_fee: { type: Number, default: 0 },
     total_paid: { type: Number, default: 0 },
     status: { type: String, default: "pending" },
     message: { type: String, default: "" },
