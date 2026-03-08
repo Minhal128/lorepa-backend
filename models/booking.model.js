@@ -17,6 +17,9 @@ const bookingSchema = new mongoose.Schema({
     returnStatus: { type: String, enum: ["pending", "returned", "disputed"], default: "pending" },
     finalTotal: { type: Number },
     stripeSessionId: { type: String, default: "" },
+    depositIntentId: { type: String, default: "" },
+    depositStatus: { type: String, enum: ["none", "held", "captured", "released"], default: "none" },
+    stripeCustomerId: { type: String, default: "" },
     createdAt: { type: Date, default: Date.now }
 });
 
