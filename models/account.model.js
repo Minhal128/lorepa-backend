@@ -30,6 +30,12 @@ const AccountSchema = mongoose.Schema({
   otpVerified: { type: Boolean, default: false },
   googleId: { type: String, default: null },
   isGoogleLogin: { type: Boolean, default: false },
+
+  // Rating fields
+  averageRating: { type: Number, default: 0 },
+  totalRatings: { type: Number, default: 0 },
+  ratingsAsOwner: { type: Number, default: 0 },
+  ratingsAsRenter: { type: Number, default: 0 },
 });
 
 const AccountModel = mongoose.model("Account", AccountSchema, "Account");

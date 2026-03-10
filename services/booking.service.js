@@ -219,12 +219,12 @@ const changeStatus = async (req, res) => {
         await createNotification({
           userId: updated.user_id,
           title: "Booking Completed",
-          description: `Your booking for "${updated?.trailerId.title}" has been completed.`
+          description: `Your booking for "${updated?.trailerId.title}" has been completed. Please rate your experience!`
         });
         await createNotification({
           userId: updated.owner_id,
           title: "Booking Completed",
-          description: `Booking for your trailer "${updated?.trailerId.title}" has been completed.`
+          description: `Booking for your trailer "${updated?.trailerId.title}" has been completed. Please rate the renter!`
         });
       } else {
         await createNotification({

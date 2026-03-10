@@ -20,6 +20,11 @@ const bookingSchema = new mongoose.Schema({
     depositIntentId: { type: String, default: "" },
     depositStatus: { type: String, enum: ["none", "held", "captured", "released"], default: "none" },
     stripeCustomerId: { type: String, default: "" },
+    
+    // Rating tracking
+    ownerRated: { type: Boolean, default: false },
+    renterRated: { type: Boolean, default: false },
+    
     createdAt: { type: Date, default: Date.now }
 });
 

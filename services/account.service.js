@@ -259,18 +259,20 @@ const verifyOtp = async (req, res) => {
             return res.status(400).json({ data: null, msg: "Account not exits", code: 400 })
         }
         else {
-            if (otp == user?.otp) {
+            // Convert both to string for comparison to handle type mismatches
+            if (String(otp) === String(user?.otp)) {
                 await AccountModel.findByIdAndUpdate(user?._id, { otp: null, otpVerified: true }, { new: true })
                 return res.status(200).json({ data: user, msg: "Otp Verified", code: 200 })
             }
             else {
-                return res.status(403).json({ msg: "Invalid Otp", code: 403 })
+                return res.status(403).json({ data: null, msg: "Invalid Otp", code: 403 })
             }
 
         }
     }
     catch (error) {
         console.log(error)
+        return res.status(500).json({ data: null, msg: "Internal Server Error", code: 500 })
     }
 }
 

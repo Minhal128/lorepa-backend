@@ -11,6 +11,7 @@ combineRouter.use("/document", require("./document.router"));
 combineRouter.use("/chat", require("./chat.router"));
 combineRouter.use("/notification", require("./notification.router"));
 combineRouter.use("/transaction", require("./transaction.router"));
+combineRouter.use("/rating", require("./rating.router"));
 
 
 
