@@ -18,17 +18,73 @@ app.use("/api/v1", combineRouter)
 
 dbConnection()
 
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || 'AIzaSyASUc7l3wvJlyJXs2R_P2nEH17iIO8aicU'
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || ''
 app.get('/api/autocomplete', async (req, res) => {
   try {
     const { input } = req.query
-    if (!input) return res.json({ status: "ZERO_RESULTS", predictions: [] });
+    if (!input || input.trim().length < 2) return res.json({ status: "ZERO_RESULTS", predictions: [] });
 
-    const response = await axios.get(
-      'https://maps.googleapis.com/maps/api/place/autocomplete/json',
-      { params: { input, key: GOOGLE_API_KEY, language: 'en' } }
-    )
-    return res.json(response.data)
+    // Use Nominatim (OpenStreetMap) — free, no API key required
+    const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+      params: {
+        q: input.trim(),
+        format: 'json',
+        addressdetails: 1,
+        limit: 7,
+        'accept-language': 'en',
+        featuretype: 'city',
+      },
+      headers: {
+        'User-Agent': 'LorepaApp/1.0 (contact@lorepa.ca)',
+        'Accept-Language': 'en',
+      },
+      timeout: 5000,
+    })
+
+    const predictions = response.data.map((item) => {
+      const addr = item.address || {}
+      const city = addr.city || addr.town || addr.village || addr.municipality || addr.county || ''
+      const state = addr.state || addr.region || ''
+      const country = addr.country || ''
+
+      // Build a concise, human-readable description
+      const parts = [city, state, country].filter(Boolean)
+      const description = parts.length > 0 ? parts.join(', ') : item.display_name
+
+      // Map Nominatim class/type to Google-like types array
+      const types = []
+      if (['city', 'town', 'village', 'hamlet', 'municipality'].includes(item.type)) {
+        types.push('locality')
+      } else if (item.type === 'administrative') {
+        types.push('administrative_area_level_1')
+      } else if (item.type === 'country') {
+        types.push('country')
+      } else {
+        types.push('locality') // default — ensures it passes the frontend filter
+      }
+
+      return {
+        place_id: String(item.place_id),
+        description,
+        lat: item.lat,
+        lon: item.lon,
+        types,
+        structured_formatting: {
+          main_text: city || description.split(',')[0].trim(),
+          secondary_text: [state, country].filter(Boolean).join(', '),
+        },
+      }
+    })
+
+    // Deduplicate by description
+    const seen = new Set()
+    const unique = predictions.filter((p) => {
+      if (seen.has(p.description)) return false
+      seen.add(p.description)
+      return true
+    })
+
+    return res.json({ status: unique.length > 0 ? 'OK' : 'ZERO_RESULTS', predictions: unique })
   } catch (err) {
     console.error('Autocomplete Error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Error fetching autocomplete', details: err.message })
