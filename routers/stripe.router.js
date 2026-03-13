@@ -25,11 +25,15 @@ router.post("/create-checkout-session", async (req, res) => {
     const serviceFee = parseFloat((rentalPrice * SERVICE_FEE_RATE).toFixed(2));
     const totalWithFee = parseFloat((rentalPrice + serviceFee).toFixed(2));
 
+    // For Accounts V2 compatibility in testmode, pre-create the customer explicitly
+    const customer = await stripe.customers.create({
+      metadata: { userId: userId || "", bookingId: bookingId || "" }
+    });
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       locale: "fr",
-      // Always create a Stripe customer so we can use the saved card for the deposit hold
-      customer_creation: "always",
+      customer: customer.id,
       line_items: [
         {
           price_data: {
@@ -60,8 +64,8 @@ router.post("/create-checkout-session", async (req, res) => {
         setup_future_usage: "off_session",
         metadata: { bookingId: bookingId || "" },
       },
-      success_url: `https://lorepa.ca/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${totalWithFee}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `https://lorepa.ca/payment-cancel`,
+      success_url: `${process.env.FRONTEND_URL || "https://lorepa.ca"}/payment-success?bookingId=${bookingId}&trailerId=${trailerId}&price=${totalWithFee}&start=${startDate}&end=${endDate}&user=${userId}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || "https://lorepa.ca"}/payment-cancel`,
     });
 
     return res.json({ url: session.url });
