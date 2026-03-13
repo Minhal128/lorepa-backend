@@ -49,7 +49,7 @@ const create = async (req, res) => {
 
       // Send the booking message in the chat
       if (message) {
-        const chatMessage = `📅 Booking Request for "${trailer.title}"\nDates: ${startDate} to ${endDate}\nPrice: $${price}\n\n${message}`;
+        const chatMessage = `📅 Demande de réservation pour "${trailer.title}"\nDates : du ${startDate} au ${endDate}\nPrix : $${price}\n\n${message}`;
         await Message.create({
           chatId: chat._id,
           sender: user_id,
@@ -62,13 +62,13 @@ const create = async (req, res) => {
       await createNotification({
         userId: user_id,
         title: "Booking Request Sent",
-        description: `Your booking request for "${trailer.title}" has been sent. Waiting for owner approval.`
+        description: `Votre demande de réservation pour "${trailer.title}" a été envoyée. En attente de l'approbation du propriétaire.`
       });
 
       await createNotification({
         userId: booking.owner_id,
         title: "New Booking Request",
-        description: `You have a new booking request for your trailer "${trailer.title}". Please review and approve or reject.`
+        description: `Vous avez une nouvelle demande de réservation pour votre remorque "${trailer.title}". Veuillez examiner et approuver ou refuser.`
       });
 
       res.status(200).json({ msg: "Booking request sent successfully", data: booking });
